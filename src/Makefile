@@ -1,7 +1,7 @@
 # Copyright (c) Tony Givargis, 2024-2026
 
 CC      = gcc
-CFLAGS  = -std=c99 -pedantic -Wall -Wextra -Werror -Wfatal-errors -O3
+CFLAGS  = -std=c99 -pedantic -Wall -Wextra -Werror -Wfatal-errors -fPIC -O3
 LDFLAGS = -L/usr/local/cuda-13/lib64 -lm -lpthread -lcudart
 DEST    = gvc
 

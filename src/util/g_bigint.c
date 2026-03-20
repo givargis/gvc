@@ -237,7 +237,7 @@ mul128(uint64_t *h, uint64_t *l, uint64_t a, uint64_t b)
 	t2 += t1 >> 32;
 	t3 += t2;
 	if (t3 < t2) {
-		t4 += 1LU << 32;
+		t4 += 1LLU << 32;
 	}
 	t4 += t3 >> 32;
 	(*h) = t4;
@@ -560,7 +560,7 @@ convert_string(const char *s)
 static char *
 print(const struct g_bigint *a)
 {
-	static const uint64_t M_[] = { 1000000000000000000LU };
+	static const uint64_t M_[] = { 1000000000000000000LLU };
 	const struct g_bigint M = { 0, 1, (uint64_t *)M_ };
 	struct g_bigint *q, *r, *q_;
 	uint64_t *stack;

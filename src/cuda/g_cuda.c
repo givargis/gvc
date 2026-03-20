@@ -117,3 +117,59 @@ g_cuda_info_print(const struct g_cuda_info *info)
 		g_log("info: }");
 	}
 }
+
+typedef void (*add_fnc_t)(float *a, float *b, float *c, int n);
+
+#define N 50
+
+void
+stage(void)
+{
+	const char *argv[] = {
+		"/usr/bin/gcc",
+		"-O3",
+		"-fpic",
+		"-shared",
+		"-o",
+		NULL, // output
+		NULL, // input
+		NULL
+	};
+       pid_t pid, pid_;
+       int status;
+
+       assert( input && (*input) );
+       assert( output && (*output) );
+
+       argv[G_ARRAY_SIZE(argv) - 2] = input;
+       argv[G_ARRAY_SIZE(argv) - 3] = output;
+
+	g_dl_t dl;
+	add_fnc_t add;
+	float a[N];
+	float b[N];
+	float c[N];
+
+	for (int i=0; i<N; ++i) {
+		a[i] = g_random() / (double)~0LLU;
+		b[i] = g_random() / (double)~0LLU;
+		c[i] = 0.0;
+	}
+
+	g_execute(argv);
+	return 0;
+
+	dl = g_dl_open("./libtest.so");
+
+	G_DL_FNC(add) = g_dl_lookup(dl, "vector_add");
+
+	add(a, b, c, N);
+
+	for (int i=0; i<N; ++i) {
+		printf("%f + %f = %f\n", a[i], b[i], c[i]);
+	}
+
+	g_dl_close(dl);
+}
+
+// nvcc -shared -Xcompiler -fPIC test.cu -o libtest.so

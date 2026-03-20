@@ -105,8 +105,8 @@ g_sha3(const void *buf_, size_t len, void *out)
 		saved |= (uint64_t)(*(buf++)) << ((bi++) * 8);
 	}
 	state.w[wi] ^= saved;
-	state.w[wi] ^= 0x06LU << ((bi) * 8);
-	state.w[16] ^= 0x8000000000000000LU;
+	state.w[wi] ^= (uint64_t)6 << ((bi) * 8);
+	state.w[16] ^= 0x8000000000000000;
 	keccakf(state.w);
 	for (i=0; i<25; i++) {
 		t1 = (uint32_t)(state.w[i] >>  0);

@@ -1,9 +1,10 @@
 # Copyright (c) Tony Givargis, 2024-2026
 
-AR     = ar
-CC     = gcc
-CFLAGS = -Wall -Wextra -Werror -Wfatal-errors -I/usr/local/cuda-13/include -O2
-DEST   = libcuda.a
+AR      = ar
+CC      = gcc
+CFLAGS  = -Wall -Wextra -Werror -Wfatal-errors -fPIC -O3
+CFLAGS += -I/usr/local/cuda-13/include
+DEST    = libcuda.a
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)

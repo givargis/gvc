@@ -24,5 +24,6 @@ main(int argc, char *argv[])
 	g_cuda_info_print(&info);
 	g_cuda_info_destroy(&info);
 
+	stage();
 	return 0;
 }
