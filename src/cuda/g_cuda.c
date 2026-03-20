@@ -3,8 +3,6 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "../util/g_util.h"
-
 #include "g_cuda.h"
 
 int
@@ -38,20 +36,32 @@ g_cuda_info_create(struct g_cuda_info *info)
 			G_TRACE("cudaGetDeviceProperties() failed");
 			return -1;
 		}
-		if (!(device->name = g_strdup(prop.name))) {
+
+		// id
+
+		if (!(device->id.name = g_strdup(prop.name))) {
 			g_cuda_info_destroy(info);
 			G_TRACE("^");
 			return -1;
 		}
-		device->hardware[0] = prop.multiProcessorCount;
-		device->hardware[1] = prop.maxThreadsPerMultiProcessor;
-		device->threads[0] = prop.maxThreadsDim[0];
-		device->threads[1] = prop.maxThreadsDim[1];
-		device->threads[2] = prop.maxThreadsDim[2];
-		device->threads[3] = prop.maxThreadsPerBlock;
-		device->blocks[0] = prop.maxGridSize[0];
-		device->blocks[1] = prop.maxGridSize[1];
-		device->blocks[2] = prop.maxGridSize[2];
+		device->id.major = prop.major;
+		device->id.minor = prop.minor;
+
+		// compute
+
+		device->compute.warp = prop.warpSize;
+		device->compute.threads = prop.maxThreadsPerMultiProcessor;
+		device->compute.processors = prop.multiProcessorCount;
+
+		// geometry
+
+		device->geometry.blocks[0] = prop.maxGridSize[0];
+		device->geometry.blocks[1] = prop.maxGridSize[1];
+		device->geometry.blocks[2] = prop.maxGridSize[2];
+		device->geometry.threads[0] = prop.maxThreadsDim[0];
+		device->geometry.threads[1] = prop.maxThreadsDim[1];
+		device->geometry.threads[2] = prop.maxThreadsDim[2];
+		device->geometry.threads[3] = prop.maxThreadsPerBlock;
 	}
 	return 0;
 }
@@ -63,9 +73,47 @@ g_cuda_info_destroy(struct g_cuda_info *info)
 
 	if (info->devices) {
 		for (int i=0; i<info->size; ++i) {
-			g_free((void *)info->devices[i].name);
+			g_free((void *)info->devices[i].id.name);
 		}
 		g_free(info->devices);
 	}
 	memset(info, 0, sizeof (struct g_cuda_info));
+}
+
+void
+g_cuda_info_print(const struct g_cuda_info *info)
+{
+	const struct g_cuda_info_device *device;
+
+	assert( info );
+
+	for (int i=0; i<info->size; ++i) {
+		device = &info->devices[i];
+		g_log("info: %s %d.%d {",
+		      device->id.name,
+		      device->id.major,
+		      device->id.minor);
+		g_log("info:   compute {");
+		g_log("info:     %d * %d (warp: %d)",
+		      device->compute.threads,
+		      device->compute.processors,
+		      device->compute.warp);
+		g_log("info:   }");
+		g_log("info:   geometry {");
+		g_log("info:     blocks {");
+		g_log("info:       %d * %d * %d",
+		      device->geometry.blocks[0],
+		      device->geometry.blocks[1],
+		      device->geometry.blocks[2]);
+		g_log("info:     }");
+		g_log("info:     threads {");
+		g_log("info:       %d * %d * %d (max: %d)",
+		      device->geometry.threads[0],
+		      device->geometry.threads[1],
+		      device->geometry.threads[2],
+		      device->geometry.threads[3]);
+		g_log("info:     }");
+		g_log("info:   }");
+		g_log("info: }");
+	}
 }
