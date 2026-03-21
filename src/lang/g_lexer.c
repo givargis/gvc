@@ -6,13 +6,13 @@
 
 #define TLEN ( sizeof (struct g_lexer_token) )
 
-#define ERROR(l, f, a)				\
+#define ERROR(l, s)				\
 	do {					\
 		g_log("error: "			\
-		      "lexer:%u:%u: " f,	\
+		      "lexer:%u:%u: %s",	\
 		      (l)->lineno,		\
 		      (l)->column,		\
-		      (a));			\
+		      (s));			\
 		G_TRACE("lexer error");		\
 	}					\
 	while (0)
@@ -157,7 +157,7 @@ process(struct g_lexer *lexer, const char *b, const char *e)
 			token->column = lexer->column - (unsigned)(e - b);
 		}
 		else {
-			ERROR(lexer, "invalid token", "");
+			ERROR(lexer, "invalid token");
 			return -1;
 		}
 	}
@@ -179,7 +179,7 @@ process_comment(struct g_lexer *lexer, const char *b)
 			++e;
 		}
 		else if (('/' == e[0]) && ('*' == e[1])) {
-			ERROR(lexer, "'/*' within block comment", "");
+			ERROR(lexer, "'/*' within block comment");
 			return NULL;
 		}
 		else if (('*' == e[0]) && ('/' == e[1])) {
@@ -191,7 +191,7 @@ process_comment(struct g_lexer *lexer, const char *b)
 			++lexer->column;
 		}
 	}
-	ERROR(lexer, "unterminated /* comment", "");
+	ERROR(lexer, "unterminated /* comment");
 	return NULL;
 }
 
@@ -228,12 +228,12 @@ process_string(struct g_lexer *lexer, const char *b)
 			++e;
 			++lexer->column;
 			if (!(*e)) {
-				ERROR(lexer, "missing escape character", "");
+				ERROR(lexer, "missing escape character");
 				return NULL;
 			}
 		}
 	}
-	ERROR(lexer, "missing terminating '%c' character", quote);
+	ERROR(lexer, "missing terminating character");
 	return NULL;
 }
 
@@ -256,7 +256,7 @@ process_numeric(struct g_lexer *lexer, const char *b)
 			++lexer->column;
 		}
 		if (2 >= (e - b)) {
-			ERROR(lexer, "invalid integer constant", "");
+			ERROR(lexer, "invalid integer constant");
 			return NULL;
 		}
 		if (!(s = strdupl(b, e)) || !(i = g_bigint_string(s))) {
@@ -282,7 +282,7 @@ process_numeric(struct g_lexer *lexer, const char *b)
 	errno = 0;
 	f = strtod(b, (char **)&e);
 	if ((EINVAL == errno) || (ERANGE == errno)) {
-		ERROR(lexer, "invalid real constant", "");
+		ERROR(lexer, "invalid real constant");
 		return NULL;
 	}
 	for (s=b; s<e; ++s) {
@@ -475,7 +475,7 @@ g_lexer_open(const char *pathname)
 		return NULL;
 	}
 	if (!(lexer->s = g_file_string_read(pathname))) {
-		ERROR(lexer, "unable to read '%s'", pathname);
+		ERROR(lexer, "unable to read file");
 		g_lexer_close(lexer);
 		return NULL;
 	}

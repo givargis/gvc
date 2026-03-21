@@ -4,14 +4,14 @@
 
 #define NLEN ( sizeof (struct g_lang_node) )
 
-#define ERROR(p, f, a)					\
+#define ERROR(p, s)					\
 	do {						\
 		if (!(p)->stop) {			\
 			g_log("error: "			\
-			      "parser:%u:%u: " f,	\
+			      "parser:%u:%u: %s",	\
 			      next(p)->lineno,		\
 			      next(p)->column,		\
-			      (a));			\
+			      (s));			\
 			G_TRACE("parser error");	\
 		}					\
 		(p)->stop = 1;				\
@@ -22,7 +22,7 @@
 	do {							\
 		(d) = g_vector_append((p)->nodes, NLEN);	\
 		if (!(d)) {					\
-			ERROR((p), "out of memory", "");	\
+			ERROR((p), "out of memory");		\
 			return NULL;				\
 		}						\
 		(d)->id = ++(p)->id;				\
@@ -122,7 +122,7 @@ expr_list(struct g_parser *parser)
 		forward(parser);
 	}
 	if (mark) {
-		ERROR(parser, "dangling ','", "");
+		ERROR(parser, "dangling ','");
 		return NULL;
 	}
 	return head;
@@ -159,9 +159,7 @@ expr_primary(struct g_parser *parser)
 	}
 	else if (match(parser, G_LEXER_IDENTIFIER)) {
 		if (!(node_ = g_map_lookup(parser->map, next(parser)->u.s))) {
-			ERROR(parser,
-			      "undefined symbol '%s'",
-			      next(parser)->u.s);
+			ERROR(parser, "undefined symbol");
 			return NULL;
 		}
 		MKN(parser, node, G_LANG_OP_EXPR_IDENTIFIER);
@@ -171,11 +169,11 @@ expr_primary(struct g_parser *parser)
 	else if (match(parser, G_LEXER_OPERATOR_LPAR)) {
 		forward(parser);
 		if (!(node = expr(parser))) {
-			ERROR(parser, "invalid expression after '('", "");
+			ERROR(parser, "invalid expression after '('");
 			return NULL;
 		}
 		if (!match(parser, G_LEXER_OPERATOR_RPAR)) {
-			ERROR(parser, "missing ')'", "");
+			ERROR(parser, "missing ')'");
 			return NULL;
 		}
 		forward(parser);
@@ -208,12 +206,11 @@ expr_postfix_(struct g_parser *parser, struct g_lang_node *left)
 			forward(parser);
 			if (!(node->right = expr(parser))) {
 				ERROR(parser,
-				      "missing array index expression",
-				      "");
+				      "missing array index expression");
 				return NULL;
 			}
 			if (!match(parser, G_LEXER_OPERATOR_RSQB)) {
-				ERROR(parser, "missing ']'", "");
+				ERROR(parser, "missing ']'");
 				return NULL;
 			}
 			forward(parser);
@@ -224,7 +221,7 @@ expr_postfix_(struct g_parser *parser, struct g_lang_node *left)
 			forward(parser);
 			node->right = expr_list(parser);
 			if (!match(parser, G_LEXER_OPERATOR_RPAR)) {
-				ERROR(parser, "missing ')'", "");
+				ERROR(parser, "missing ')'");
 				return NULL;
 			}
 			forward(parser);
@@ -234,7 +231,7 @@ expr_postfix_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!match(parser, G_LEXER_IDENTIFIER)) {
-				ERROR(parser, "missing identifier", "");
+				ERROR(parser, "missing identifier");
 				return NULL;
 			}
 			node->token = next(parser);
@@ -286,7 +283,7 @@ expr_unary(struct g_parser *parser)
 	if (match(parser, G_LEXER_OPERATOR_ADD)) {
 		forward(parser);
 		if (!(node = expr_unary(parser))) {
-			ERROR(parser, "invalid unary '+' operand", "");
+			ERROR(parser, "invalid unary '+' operand");
 			return NULL;
 		}
 	}
@@ -294,7 +291,7 @@ expr_unary(struct g_parser *parser)
 		MKN(parser, node, G_LANG_OP_EXPR_NEG);
 		forward(parser);
 		if (!(node->right = expr_unary(parser))) {
-			ERROR(parser, "invalid unary '-' operand", "");
+			ERROR(parser, "invalid unary '-' operand");
 			return NULL;
 		}
 	}
@@ -302,7 +299,7 @@ expr_unary(struct g_parser *parser)
 		MKN(parser, node, G_LANG_OP_EXPR_NOT);
 		forward(parser);
 		if (!(node->right = expr_unary(parser))) {
-			ERROR(parser, "invalid '~' operand", "");
+			ERROR(parser, "invalid '~' operand");
 			return NULL;
 		}
 	}
@@ -310,7 +307,7 @@ expr_unary(struct g_parser *parser)
 		MKN(parser, node, G_LANG_OP_EXPR_LOGIC_NOT);
 		forward(parser);
 		if (!(node->right = expr_unary(parser))) {
-			ERROR(parser, "invalid '!' operand", "");
+			ERROR(parser, "invalid '!' operand");
 			return NULL;
 		}
 	}
@@ -318,7 +315,7 @@ expr_unary(struct g_parser *parser)
 		MKN(parser, node, G_LANG_OP_EXPR_INC);
 		forward(parser);
 		if (!(node->right = expr_unary(parser))) {
-			ERROR(parser, "invalid '++' operand", "");
+			ERROR(parser, "invalid '++' operand");
 			return NULL;
 		}
 	}
@@ -326,7 +323,7 @@ expr_unary(struct g_parser *parser)
 		MKN(parser, node, G_LANG_OP_EXPR_DEC);
 		forward(parser);
 		if (!(node->right = expr_unary(parser))) {
-			ERROR(parser, "invalid '--' operand", "");
+			ERROR(parser, "invalid '--' operand");
 			return NULL;
 		}
 	}
@@ -357,7 +354,7 @@ expr_multiplicative_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_unary(parser))) {
-				ERROR(parser, "invalid '*' operand", "");
+				ERROR(parser, "invalid '*' operand");
 				return NULL;
 			}
 			if (!(node = expr_multiplicative_(parser, node))) {
@@ -370,7 +367,7 @@ expr_multiplicative_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_unary(parser))) {
-				ERROR(parser, "invalid '/' operand", "");
+				ERROR(parser, "invalid '/' operand");
 				return NULL;
 			}
 			if (!(node = expr_multiplicative_(parser, node))) {
@@ -383,7 +380,7 @@ expr_multiplicative_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_unary(parser))) {
-				ERROR(parser, "invalid '%%' operand", "");
+				ERROR(parser, "invalid '%%' operand");
 				return NULL;
 			}
 			if (!(node = expr_multiplicative_(parser, node))) {
@@ -430,7 +427,7 @@ expr_additive_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_multiplicative(parser))) {
-				ERROR(parser, "invalid '+' operand", "");
+				ERROR(parser, "invalid '+' operand");
 				return NULL;
 			}
 			if (!(node = expr_additive_(parser, node))) {
@@ -443,7 +440,7 @@ expr_additive_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_multiplicative(parser))) {
-				ERROR(parser, "invalid '-' operand", "");
+				ERROR(parser, "invalid '-' operand");
 				return NULL;
 			}
 			if (!(node = expr_additive_(parser, node))) {
@@ -490,7 +487,7 @@ expr_shift_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_additive(parser))) {
-				ERROR(parser, "invalid '<<' operand", "");
+				ERROR(parser, "invalid '<<' operand");
 				return NULL;
 			}
 			if (!(node = expr_shift_(parser, node))) {
@@ -503,7 +500,7 @@ expr_shift_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_additive(parser))) {
-				ERROR(parser, "invalid '>>' operand", "");
+				ERROR(parser, "invalid '>>' operand");
 				return NULL;
 			}
 			if (!(node = expr_shift_(parser, node))) {
@@ -550,7 +547,7 @@ expr_relational_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_shift(parser))) {
-				ERROR(parser, "invalid '<' operand", "");
+				ERROR(parser, "invalid '<' operand");
 				return NULL;
 			}
 			if (!(node = expr_relational_(parser, node))) {
@@ -563,7 +560,7 @@ expr_relational_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_shift(parser))) {
-				ERROR(parser, "invalid '>' operand", "");
+				ERROR(parser, "invalid '>' operand");
 				return NULL;
 			}
 			if (!(node = expr_relational_(parser, node))) {
@@ -576,7 +573,7 @@ expr_relational_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_shift(parser))) {
-				ERROR(parser, "invalid '<=' operand", "");
+				ERROR(parser, "invalid '<=' operand");
 				return NULL;
 			}
 			if (!(node = expr_relational_(parser, node))) {
@@ -589,7 +586,7 @@ expr_relational_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_shift(parser))) {
-				ERROR(parser, "invalid '>=' operand", "");
+				ERROR(parser, "invalid '>=' operand");
 				return NULL;
 			}
 			if (!(node = expr_relational_(parser, node))) {
@@ -635,24 +632,30 @@ expr_equality_(struct g_parser *parser, struct g_lang_node *left)
 			MKN(parser, node, G_LANG_OP_EXPR_EQ);
 			node->left = left;
 			forward(parser);
+			if (!(node->right = expr_relational(parser))) {
+				ERROR(parser, "invalid '==' operand");
+				return NULL;
+			}
+			if (!(node = expr_equality_(parser, node))) {
+				G_TRACE("^");
+				return NULL;
+			}
 		}
 		else if (match(parser, G_LEXER_OPERATOR_NE)) {
 			MKN(parser, node, G_LANG_OP_EXPR_NE);
 			node->left = left;
 			forward(parser);
+			if (!(node->right = expr_relational(parser))) {
+				ERROR(parser, "invalid '!=' operand");
+				return NULL;
+			}
+			if (!(node = expr_equality_(parser, node))) {
+				G_TRACE("^");
+				return NULL;
+			}
 		}
 		else {
 			break;
-		}
-		if (!(node->right = expr_relational(parser))) {
-			ERROR(parser,
-			      "invalid '%s' operand",
-			      (node->op == G_LANG_OP_EXPR_EQ) ? "==" : "!=");
-			return NULL;
-		}
-		if (!(node = expr_equality_(parser, node))) {
-			G_TRACE("^");
-			return NULL;
 		}
 	}
 	return node;
@@ -690,7 +693,7 @@ expr_and_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_equality(parser))) {
-				ERROR(parser, "invalid '&' operand", "");
+				ERROR(parser, "invalid '&' operand");
 				return NULL;
 			}
 			if (!(node = expr_and_(parser, node))) {
@@ -737,7 +740,7 @@ expr_xor_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_and(parser))) {
-				ERROR(parser, "invalid '^' operand", "");
+				ERROR(parser, "invalid '^' operand");
 				return NULL;
 			}
 			if (!(node = expr_xor_(parser, node))) {
@@ -784,7 +787,7 @@ expr_or_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_xor(parser))) {
-				ERROR(parser, "invalid '|' operand", "");
+				ERROR(parser, "invalid '|' operand");
 				return NULL;
 			}
 			if (!(node = expr_or_(parser, node))) {
@@ -831,7 +834,7 @@ expr_logic_and_(struct g_parser *parser, struct g_lang_node *left)
 			node->left = left;
 			forward(parser);
 			if (!(node->right = expr_or(parser))) {
-				ERROR(parser, "invalid '&&' operand", "");
+				ERROR(parser, "invalid '&&' operand");
 				return NULL;
 			}
 			if (!(node = expr_logic_and_(parser, node))) {
@@ -877,17 +880,17 @@ expr_logic_or_(struct g_parser *parser, struct g_lang_node *left)
 			MKN(parser, node, G_LANG_OP_EXPR_LOGIC_OR);
 			node->left = left;
 			forward(parser);
+			if (!(node->right = expr_logic_and(parser))) {
+				ERROR(parser, "invalid '||' operand");
+				return NULL;
+			}
+			if (!(node = expr_logic_or_(parser, node))) {
+				G_TRACE("^");
+				return NULL;
+			}
 		}
 		else {
 			break;
-		}
-		if (!(node->right = expr_logic_and(parser))) {
-			ERROR(parser, "invalid '||' operand", "");
-			return NULL;
-		}
-		if (!(node = expr_logic_or_(parser, node))) {
-			G_TRACE("^");
-			return NULL;
 		}
 	}
 	return node;
@@ -924,16 +927,16 @@ expr_cond(struct g_parser *parser)
 		node_->cond = node;
 		forward(parser);
 		if (!(node_->left = expr(parser))) {
-			ERROR(parser, "invalid '?' operand", "");
+			ERROR(parser, "invalid '?' operand");
 			return NULL;
 		}
 		if (!match(parser, G_LEXER_OPERATOR_COLON)) {
-			ERROR(parser, "invalid ':'", "");
+			ERROR(parser, "invalid ':'");
 			return NULL;
 		}
 		forward(parser);
 		if (!(node_->right = expr(parser))) {
-			ERROR(parser, "invalid ':' operand", "");
+			ERROR(parser, "invalid ':' operand");
 			return NULL;
 		}
 		node = node_;
@@ -963,11 +966,11 @@ top(struct g_parser *parser)
 	struct g_lang_node *node;
 
 	if (!(node = expr(parser))) {
-		ERROR(parser, "invalid program", "");
+		ERROR(parser, "invalid program");
 		return NULL;
 	}
 	if (!match(parser, G_LEXER_END)) {
-		ERROR(parser, "invalid token", "");
+		ERROR(parser, "invalid token");
 		return NULL;
 	}
 	return node;
@@ -993,7 +996,7 @@ g_parser_open(const char *pathname)
 		return NULL;
 	}
 	if (1 >= (parser->n = g_lexer_items(parser->lexer))) {
-		ERROR(parser, "empty translation unit", "");
+		ERROR(parser, "empty translation unit");
 		g_parser_close(parser);
 		return NULL;
 	}

@@ -2,17 +2,16 @@
 
 #include "g_json.h"
 
-#define ERROR(j, m)					\
+#define ERROR(j, s)					\
 	do {						\
 		(j)->curr = "";				\
 		(j)->token.op = OP_EOF;			\
 		if (!(j)->stop) {			\
 			g_log("error: "			\
-			      "json: "			\
-			      "%u:%u: %s",		\
+			      "json:%u:%u: %s",		\
 			      (j)->lineno,		\
 			      (j)->column,		\
-			      (m));			\
+			      (s));			\
 			G_TRACE("syntax error");	\
 		}					\
 		(j)->stop = 1;				\
