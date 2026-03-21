@@ -24,6 +24,9 @@ main(int argc, char *argv[])
 	g_cuda_info_print(&info);
 	g_cuda_info_destroy(&info);
 
-	stage();
+	if (g_cuda_execute()) {
+		G_TRACE("^");
+		return -1;
+	}
 	return 0;
 }

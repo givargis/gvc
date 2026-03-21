@@ -31,6 +31,6 @@ void g_cuda_info_destroy(struct g_cuda_info *info);
 
 void g_cuda_info_print(const struct g_cuda_info *info);
 
-void stage(void);
+int g_cuda_execute(void);
 
 #endif

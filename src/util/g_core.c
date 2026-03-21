@@ -131,14 +131,6 @@ g_sprintf(char *buf, size_t len, const char *format, ...)
 }
 
 void
-g_unlink(const char *pathname)
-{
-	if (pathname && (*pathname)) {
-		remove(pathname);
-	}
-}
-
-void
 g_usleep(unsigned us)
 {
 	struct timespec in, out;

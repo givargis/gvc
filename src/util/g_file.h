@@ -28,4 +28,8 @@ char *g_file_string_read(const char *pathname); // caller free
 
 int g_file_string_write(const char *pathname, const char *s);
 
+void g_file_unlink(const char *pathname);
+
+const char *g_file_pathname(const char *ext); // caller free
+
 #endif

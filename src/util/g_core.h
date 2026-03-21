@@ -36,8 +36,6 @@ void g_log(const char *format, ...);
 
 void g_sprintf(char *buf, size_t len, const char *format, ...);
 
-void g_unlink(const char *pathname);
-
 void g_usleep(unsigned us);
 
 uint64_t g_time(void);

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "g_hash.h"
 #include "g_file.h"
 
 struct g_file {
@@ -182,10 +183,50 @@ g_file_string_write(const char *pathname, const char *s)
 				 G_FILE_MODE_CREATE |
 				 G_FILE_MODE_TRUNCATE)) ||
 	    g_file_write(file, s, 0, s ? strlen(s) : 0)) {
+		g_file_unlink(pathname);
 		g_file_close(file);
 		G_TRACE("^");
 		return -1;
 	}
 	g_file_close(file);
 	return 0;
+}
+
+void
+g_file_unlink(const char *pathname)
+{
+	if (pathname && (*pathname)) {
+		remove(pathname);
+	}
+}
+
+const char *
+g_file_pathname(const char *ext)
+{
+	const char *tmp;
+	uint64_t tm;
+	size_t n;
+	char *s;
+
+	tm = g_time();
+	if (!(tmp = getenv("TMPDIR")) &&
+	    !(tmp = getenv("TMP")) &&
+	    !(tmp = getenv("TEMP")) &&
+	    !(tmp = getenv("TEMPDIR"))) {
+		tmp = NULL;
+	}
+	n = (tmp ? strlen(tmp) : 0) + (ext ? strlen(ext) : 0) + 19; // 16+1+1+1
+	if (!(s = g_malloc(n))) {
+		G_TRACE("^");
+		return NULL;
+	}
+	g_sprintf(s,
+		  n,
+		  "%s%s" "%016llx" "%s%s",
+		  tmp ? tmp : "",
+		  tmp ? "/" : "",
+		  g_hash(&tm, sizeof (tm)),
+		  ext ? "." : "",
+		  ext ? ext : "");
+	return s;
 }

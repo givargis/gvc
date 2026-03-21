@@ -122,27 +122,22 @@ typedef void (*add_fnc_t)(float *a, float *b, float *c, int n);
 
 #define N 50
 
-void
-stage(void)
+int
+g_cuda_execute(void)
 {
-	const char *argv[] = {
-		"/usr/bin/gcc",
-		"-O3",
-		"-fpic",
+	const char *INPUT = "test.cu";
+	const char *OUTPUT = "libtest.so";
+
+	const char *ARGV[] = {
+		"/usr/local/cuda-13.0/bin/nvcc",
 		"-shared",
+		"-Xcompiler",
+		"-fPIC",
 		"-o",
-		NULL, // output
-		NULL, // input
+		OUTPUT,
+		INPUT,
 		NULL
 	};
-       pid_t pid, pid_;
-       int status;
-
-       assert( input && (*input) );
-       assert( output && (*output) );
-
-       argv[G_ARRAY_SIZE(argv) - 2] = input;
-       argv[G_ARRAY_SIZE(argv) - 3] = output;
 
 	g_dl_t dl;
 	add_fnc_t add;
@@ -156,12 +151,23 @@ stage(void)
 		c[i] = 0.0;
 	}
 
-	g_execute(argv);
-	return 0;
+	if (g_execute(ARGV)) {
+		G_TRACE("^");
+		return -1;
+	}
 
-	dl = g_dl_open("./libtest.so");
+	if (!(dl = g_dl_open("./libtest.so"))) {
+		g_file_unlink(OUTPUT);
+		G_TRACE("^");
+		return -1;
+	}
 
-	G_DL_FNC(add) = g_dl_lookup(dl, "vector_add");
+	if (!(G_DL_FNC(add) = g_dl_lookup(dl, "vector_add"))) {
+		g_dl_close(dl);
+		g_file_unlink(OUTPUT);
+		G_TRACE("symbol not found");
+		return -1;
+	}
 
 	add(a, b, c, N);
 
@@ -170,6 +176,45 @@ stage(void)
 	}
 
 	g_dl_close(dl);
+	g_file_unlink(OUTPUT);
+	return 0;
 }
 
-// nvcc -shared -Xcompiler -fPIC test.cu -o libtest.so
+/*
+  #include <iostream>
+  #include <cuda_runtime.h>
+
+  __global__ void
+  _vector_add_(float *a, float *b, float *c, int n)
+  {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < n) {
+  c[i] = a[i] + b[i];
+  }
+  }
+
+  extern "C" void
+  vector_add(float *a, float *b, float *c, int n)
+  {
+  size_t size = n * sizeof (float);
+
+  float *d_A, *d_B, *d_C;
+
+  cudaMalloc((void**)&d_A, size);
+  cudaMalloc((void**)&d_B, size);
+  cudaMalloc((void**)&d_C, size);
+
+  cudaMemcpy(d_A, a, size, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_B, b, size, cudaMemcpyHostToDevice);
+
+  int threadsPerBlock = 256;
+  int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+  _vector_add_<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, d_C, n);
+
+  cudaMemcpy(c, d_C, size, cudaMemcpyDeviceToHost);
+
+  cudaFree(d_A);
+  cudaFree(d_B);
+  cudaFree(d_C);
+  }
+*/
